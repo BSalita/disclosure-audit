@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+# audits of real boards stay with the project they belong to
+/out/

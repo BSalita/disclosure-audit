@@ -1,0 +1,12 @@
+[Event "Example"]
+[Board "7"]
+[North "Robo"]
+[South "Me"]
+[Dealer "S"]
+[Vulnerable "All"]
+[Deal "S:AKQ4.T93.852.KJ7 85.KQJ4.AQT4.652 JT973.A7.K63.A94 62.8652.J97.QT83"]
+[Auction "S"]
+1NT =1= Pass 2H =2= Pass
+2S AP
+[Note "1:15-17 HCP, balanced"]
+[Note "2:Transfer, 5+ spades"]
