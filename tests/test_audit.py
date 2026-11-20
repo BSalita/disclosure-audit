@@ -166,3 +166,28 @@ class Calibrate(unittest.TestCase):
         self.assertIsNone(audit.check_record(r, calibration=table)['class'])
         other = {**r, 'model': 'someone else'}                                # a table widens its own model only
         self.assertEqual(audit.check_record(other, calibration=table)['class'], 'length 1')
+
+
+class Issue(unittest.TestCase):
+    def test_issue_layout(self):
+        with tempfile.TemporaryDirectory() as d:
+            pbn = os.path.join(d, 'a.pbn')
+            with open(pbn, 'w', encoding='utf-8') as f:
+                f.write(PBN)
+            recs = os.path.join(d, 'records.jsonl')
+            write_jsonl(recs, sources.pbn([pbn], model='pair'))
+            out = os.path.join(d, 'out')
+            audit.run([recs], out)
+            conf = os.path.join(d, 'audit.json')
+            with open(conf, 'w') as f:
+                json.dump({'from': 'the testers', 'tool': {'url': 'https://example.org/tool'},
+                           'models': {'pair': {'style': 'issue', 'title': 'Explanations too narrow',
+                                               'reproduce': ['Run `x` then `y`.']}}}, f)
+            report.run(out, conf, today='2026-01-01')
+            with open(os.path.join(out, 'reports', 'pair', 'issue.md'), encoding='utf-8') as f:
+                text = f.read()
+        self.assertTrue(text.startswith('Title: Explanations too narrow\n\n---\n'))
+        for part in ('### Summary', '### Expected', '### Actual', '### Cases to reproduce', '### How this was checked',
+                     '### Run the same check yourself', 'git clone https://example.org/tool', 'Run `x` then `y`.',
+                     '13 HCP, stated 15-17', 'by the testers'):
+            self.assertIn(part, text)

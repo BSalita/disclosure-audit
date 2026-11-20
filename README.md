@@ -150,6 +150,28 @@ many explanations get an example table, default 10) and `notes` (a Markdown file
 near the end: what you think is going on, what you suggest). `from` says who prepared the
 reports.
 
+## Sending the findings: the issue layout
+
+With `"style": "issue"` for a model or a view, `report` also writes `issue.md`: the findings
+laid out the way a tracker expects them. The first line is the title; everything under the
+rule is the body, ready to paste into a new issue. For a maintainer without a tracker the
+same text is the mail, with the title as its subject. `cases.csv` is the attachment.
+
+The body has: a summary with the headline number; what is expected and what happens; the
+explanations that most often do not fit, with their rates; cases to reproduce; your notes
+(what you think is going on, a suggested fix); how it was checked; and how the reader can
+install this tool and run the same check, so that a correction can be verified by whoever
+makes it. Settings for it:
+
+- `expected`: one sentence for "Expected".
+- `reproduce`: lines of Markdown with the commands for this source (default: the three steps).
+- `labels`: readable names for `extra` fields, such as `{"requires": "The rule's own condition"}`.
+- `top_evidence`: the `extra` fields shown in the table of explanations (default: `evidence`).
+- `show_event`: `false` leaves the event and board out of the cases (they mean nothing to
+  someone who does not have your boards).
+- `issue_notes`: a notes file for the issue only, when the report's notes are for yourself.
+- `tool.url` (top level): where the reader gets this tool.
+
 ## What comes out
 
 ```
@@ -158,6 +180,7 @@ DIR/bad.jsonl                   the log: the calls whose explanation does not fi
 DIR/counts.json                 counts for each model, and the texts that could not be checked
 DIR/reports/README.md           one line a model
 DIR/reports/<model>/report.md   the report, to send as it is (Markdown: reads as plain text in a mail, renders in a ticket)
+DIR/reports/<model>/issue.md    the same findings as an issue for a tracker, when the config asks for it
 DIR/reports/<model>/cases.csv   every case of that model, for a spreadsheet
 ```
 

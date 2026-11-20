@@ -22,6 +22,8 @@ def check_record(r, dialect='auto', calibration=None):
     symbols = d == 'symbols' or (d == 'auto' and readers.looks_like_symbols(r.get('text', '')))
     kind = call_kind(r['call'])
     head = readers.head(r['text']) if symbols else r['text'].strip()
+    # cards of a suit in rank order, however the source wrote them
+    r = {**r, 'hand': '.'.join(''.join(sorted(suit, key=checks.RANKS.index)) for suit in r['hand'].split('.'))}
     out = {**r, 'hcp': hcp, 'shape': checks.shape_text(r['hand']), 'kind': kind, 'head': head}
     if calibration and r['model'] == calibration.get('model'):
         # judged as the explanation would read once widened (calibrate.py); the record keeps the text as given
