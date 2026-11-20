@@ -8,6 +8,7 @@ version = "0.1.0"
 description = "Do the explanations of bridge calls fit the hands that made them?"
 readme = "README.md"
 requires-python = ">=3.9"
+license = {text = "MIT"}
 dependencies = []
 
 [project.scripts]

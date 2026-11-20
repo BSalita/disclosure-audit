@@ -268,3 +268,7 @@ the calls; if it loses, the calls are worth keeping and the text is what to corr
   there and a test in `tests/`.
 - The comparison is `disclosure_audit/checks.py`; a new kind of statement (key cards,
   stoppers) is a new field of `stated` and a few lines in `misfits`.
+
+## License
+
+MIT, see `LICENSE`.
