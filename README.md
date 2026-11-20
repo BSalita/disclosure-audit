@@ -33,6 +33,7 @@ That gives the command `disclosure-audit`. Without installing, run it from the f
 disclosure-audit import <format> FILES... --out records.jsonl      1. a source -> records
 disclosure-audit check records.jsonl ... --out DIR                 2. records -> verdicts
 disclosure-audit report DIR [--config audit.json]                  3. verdicts -> one report a model
+disclosure-audit calibrate DIR --model NAME --out FILE             optional: the widening that would make the texts true
 ```
 
 A **record** is one explained call, one JSON object a line:
@@ -202,6 +203,37 @@ yet. So the share of bad explanations is a floor on what is wrong, not the whole
 agreement, not the hand: a deliberate deviation with a correct explanation is legal. For a
 robot, though, a call it makes regularly with hands outside the description is part of its
 method, and the description should say so.
+
+## Correcting a model's explanations
+
+When the calls are right and the text is too narrow, the text can be widened to what the
+bidder's calls show in practice. `calibrate` fits that widening from the verdicts:
+
+```
+disclosure-audit check fit.records.jsonl --out fit
+disclosure-audit calibrate fit --model morty-ai --out calibration.json
+disclosure-audit check other.records.jsonl --out after --calibration calibration.json
+```
+
+For each kind of explanation (the kind of call and the words of the text) it finds the
+smallest widening that leaves at most `--target` of the calls outside (default 3%), within
+`--caps` (default: one card below a stated least, one above a stated most, three points
+either way). Explanations seen fewer than `--min-calls` times share one widening. The
+table depends on the explanation only, never on the hand, so a widened text says nothing
+about one hand that the bidder's method does not show anyway.
+
+Fit on one set of boards and check on another: the third line judges records as they would
+read once widened, on boards the fit has not seen. What is still outside after widening are
+the bidder's real deviations: look at those calls rather than at the text.
+
+Applying the table is the job of the program that writes the explanations. BEN does it in
+`src/disclosure.py` when its config has `[sampling] disclosure_calibration = <file>`, and
+`adapters/ben_epbot.py --calibration <file>` exports the text exactly as BEN then sends it,
+without the numbers, so that the audit reads the final text as a receiver would.
+
+Before widening, test the other correction: make the bidder keep to the system where its
+hand is far outside the text, and measure what that costs. If it costs nothing, correct
+the calls; if it loses, the calls are worth keeping and the text is what to correct.
 
 ## Adding a source or a dialect
 

@@ -140,3 +140,29 @@ class EndToEnd(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class Calibrate(unittest.TestCase):
+    def rows(self):
+        from disclosure_audit import calibrate
+        # 100 calls "Suit -- 5+!S; 10-12 HCP": 90 fit, 8 hold four spades, 2 hold three spades and 6 points
+        hands = ['AKQ54.432.432.32'] * 90 + ['AKQ5.5432.432.32'] * 8 + ['A54.5432.Q432.32'] * 2
+        recs = [{'model': 'm', 'hand': h, 'call': '1S', 'text': 'Suit -- 5+!S; 9-12 HCP'} for h in hands]
+        return calibrate, [audit.check_record(r) for r in recs]
+
+    def test_fit(self):
+        calibrate, checked = self.rows()
+        table = calibrate.fit_table(checked, 'm', target=0.03, caps=(1, 1, 3, 3), min_calls=30)
+        self.assertEqual(table['heads'], {'bid|Suit': [1, 0, 0, 0]})          # one card covers the eight; the two stay deviations
+        self.assertEqual(table['fitted on'], {'calls': 100, 'outside before': 10, 'outside after': 2})
+
+    def test_widen_and_check(self):
+        calibrate, checked = self.rows()
+        table = calibrate.fit_table(checked, 'm')
+        self.assertEqual(calibrate.widen({'lengths': {'S': [5, None], 'H': [None, 3]}, 'points': [9, 12]}, [1, 1, 2, 0]),
+                         {'lengths': {'S': [4, None], 'H': [None, 4]}, 'points': [7, 12]})
+        r = {'model': 'm', 'hand': 'AKQ5.5432.432.32', 'call': '1S', 'text': 'Suit -- 5+!S; 9-12 HCP'}
+        self.assertEqual(audit.check_record(r)['class'], 'length 1')
+        self.assertIsNone(audit.check_record(r, calibration=table)['class'])
+        other = {**r, 'model': 'someone else'}                                # a table widens its own model only
+        self.assertEqual(audit.check_record(other, calibration=table)['class'], 'length 1')

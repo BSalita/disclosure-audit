@@ -16,6 +16,10 @@ extra.system_call is the call EPBot itself makes with the hand, extra.in_system 
 call made is that one: a bad explanation of a system call is the describing program's
 defect, a call outside the system is the bidder's.
 
+--calibration FILE writes the text as BEN sends it with [sampling] disclosure_calibration
+= FILE (BEN's src/disclosure.py widens the numbers), and leaves `stated` out, so that the
+audit reads the numbers from the final text, as a receiver would.
+
 Boards: --games (one line a deal with hands [N, E, S, W], calls, dealer, vul; the format of
 BEN's scripts/selfplay/selfplay_gen.py), or --deals (tournament_id, board, deal in PBN
 form, dealer, vul, scoring) with --replay (tournament_id, board, walk = the calls).
@@ -65,6 +69,9 @@ def chunk(boards):
                 except Exception as error:
                     system_call = f'error: {error}'
                 text, artificial = bot.explain_last_bid(before + [call])
+                if cfg['calibration']:
+                    import disclosure
+                    text = disclosure.calibrate_text(text, call, disclosure.load(cfg['calibration']))
                 player = bot.players[bot.position]
                 least = player.get_info_min_length(seat)
                 most = player.get_info_max_length(seat)
@@ -74,8 +81,9 @@ def chunk(boards):
                 out.append({'model': cfg['model'], 'source': cfg['source'], 'event': b.get('tournament_id'), 'board': b.get('board'),
                             'seat': cfg['seat'], 'dealer': b['dealer'], 'vul': b['vul'], 'hand': hand,
                             'auction': b['walk'][:i], 'call': b['walk'][i], 'text': text, 'dialect': 'symbols',
-                            'stated': {'lengths': {s: v for s, v in lengths.items() if v != [None, None]},
-                                       'points': [int(lo) if lo > 0 else None, int(hi) if hi < 37 else None]},
+                            **({} if cfg['calibration'] else {
+                                'stated': {'lengths': {s: v for s, v in lengths.items() if v != [None, None]},
+                                           'points': [int(lo) if lo > 0 else None, int(hi) if hi < 37 else None]}}),
                             'extra': {'system_call': 'P' if system_call == 'PASS' else system_call,
                                       'in_system': system_call == call, 'artificial': bool(artificial),
                                       'our_call_number': sum(1 for j in range(i) if (dealer_i + j) % 4 == seat) + 1}})
@@ -95,6 +103,7 @@ def main():
     p.add_argument('--deals')
     p.add_argument('--replay')
     p.add_argument('--seat', default='S')
+    p.add_argument('--calibration', help='a table of `disclosure-audit calibrate`: the text as BEN sends it with that table')
     p.add_argument('--workers', type=int, default=8)
     p.add_argument('--limit', type=int, default=0)
     args = p.parse_args()
@@ -129,7 +138,8 @@ def main():
     if args.limit:
         boards = boards[:args.limit]
     source = args.source or os.path.basename(args.games or args.replay)
-    cfg = {'ben': os.path.abspath(args.ben), 'our_cc': ccs[0], 'their_cc': ccs[1], 'seat': args.seat, 'model': args.model, 'source': source}
+    cfg = {'ben': os.path.abspath(args.ben), 'our_cc': ccs[0], 'their_cc': ccs[1], 'seat': args.seat, 'model': args.model, 'source': source,
+           'calibration': os.path.abspath(args.calibration) if args.calibration else None}
     chunks = [boards[i:i + 20] for i in range(0, len(boards), 20)]
     n = errors = 0
     with mp.get_context('spawn').Pool(min(args.workers, max(1, len(chunks))), initializer=init, initargs=(cfg,)) as pool, \

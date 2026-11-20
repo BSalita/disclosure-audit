@@ -3,11 +3,11 @@ import collections
 import json
 import os
 
-from . import checks, readers
+from . import calibrate, checks, readers
 from .records import call_kind, read_jsonl, write_jsonl
 
 
-def check_record(r, dialect='auto'):
+def check_record(r, dialect='auto', calibration=None):
     """The record with its verdict added, or None when nothing in it can be checked.
     Adds: hcp, shape, kind (pass, double, bid), head, wrong, class, cards_off, points_off."""
     if not r.get('text') and not r.get('stated'):
@@ -20,12 +20,22 @@ def check_record(r, dialect='auto'):
         return None
     hcp, _ = checks.hand_facts(r['hand'])
     symbols = d == 'symbols' or (d == 'auto' and readers.looks_like_symbols(r.get('text', '')))
-    return {**r, 'hcp': hcp, 'shape': checks.shape_text(r['hand']), 'kind': call_kind(r['call']),
-            'head': readers.head(r['text']) if symbols else r['text'].strip(), **checks.misfits(r['hand'], stated)}
+    kind = call_kind(r['call'])
+    head = readers.head(r['text']) if symbols else r['text'].strip()
+    out = {**r, 'hcp': hcp, 'shape': checks.shape_text(r['hand']), 'kind': kind, 'head': head}
+    if calibration and r['model'] == calibration.get('model'):
+        # judged as the explanation would read once widened (calibrate.py); the record keeps the text as given
+        stated = calibrate.widen(stated, calibrate.slack_for(calibration, kind, head))
+        out['stated'] = stated
+        out['widened'] = True
+    return {**out, **checks.misfits(r['hand'], stated)}
 
 
-def run(paths, out, dialect='auto'):
+def run(paths, out, dialect='auto', calibration=None):
     os.makedirs(out, exist_ok=True)
+    if isinstance(calibration, str):
+        with open(calibration, encoding='utf-8') as f:
+            calibration = json.load(f)
     counts = {}
     unread = collections.defaultdict(collections.Counter)
     checked = []
@@ -37,7 +47,7 @@ def run(paths, out, dialect='auto'):
             continue
         c['explained'] += 1
         try:
-            v = check_record(r, dialect)
+            v = check_record(r, dialect, calibration)
         except ValueError:
             c['bad hand, left out'] += 1
             continue
